@@ -8,11 +8,11 @@ pub struct Settings {
 
 #[derive(serde::Deserialize)]
 pub struct DatabaseSettings {
-    host: String,
-    user: String,
-    password: String,
-    name: String,
-    port: u16,
+    pub host: String,
+    pub user: String,
+    pub password: String,
+    pub name: String,
+    pub port: u16,
 }
 
 impl DatabaseSettings {
@@ -22,12 +22,21 @@ impl DatabaseSettings {
             self.user, self.password, self.host, self.port, self.name
         )
     }
+
+    pub fn get_uri_without_db(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}",
+            self.user, self.password, self.host, self.port
+        )
+    }
 }
 
-pub fn get_config() -> Result<Settings, config::ConfigError> {
+pub fn get_config() -> Settings {
     let settings = Config::builder()
         .add_source(File::with_name("config.yaml"))
         .build()
         .expect("Could not load config.json");
-    settings.try_deserialize::<Settings>()
+    settings
+        .try_deserialize::<Settings>()
+        .expect("Could not deserialize config")
 }

@@ -2,30 +2,59 @@ use std::collections::HashMap;
 use std::net::TcpListener;
 
 use actix_web::rt::spawn;
-use sqlx::postgres::{PgPool, Postgres};
-use sqlx::{query, Pool};
+use sqlx::{migrate, query, Executor, PgPool};
+use uuid::Uuid;
 
 use zero2prod::config::get_config;
 use zero2prod::startup::create_server;
 
-fn spawn_app() -> String {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("Could not bind to random port");
-    let port = listener.local_addr().unwrap().port();
-    let server = create_server(listener).expect("Could not get server");
-    let _ = spawn(server);
-    format!("http://127.0.0.1:{port}")
+struct App {
+    url: String,
+    db: PgPool,
 }
 
-async fn connect_to_database() -> Pool<Postgres> {
-    let config = get_config().unwrap();
-    let database_uri = config.database.get_uri();
-    PgPool::connect(&database_uri).await.expect("")
+async fn spawn_app() -> App {
+    let db = setup_mock_database().await;
+    let listener = TcpListener::bind("127.0.0.1:0").expect("Could not bind to random port");
+    let port = listener.local_addr().unwrap().port();
+    let server = create_server(listener, db.clone()).expect("Could not get server");
+    let _ = spawn(server);
+    App {
+        url: format!("http://127.0.0.1:{port}"),
+        db,
+    }
+}
+
+async fn setup_mock_database() -> PgPool {
+    let mut config = get_config();
+    let db_uri = config.database.get_uri_without_db();
+    config.database.name = Uuid::new_v4().to_string();
+
+    // create database
+    let db = PgPool::connect(&db_uri)
+        .await
+        .expect("Could not connect to database");
+    db.execute(format!(r#"CREATE DATABASE "{}";"#, config.database.name).as_str())
+        .await
+        .expect("Could not create mock database");
+
+    // migrate database
+    let db_uri = config.database.get_uri();
+    let db = PgPool::connect(&db_uri)
+        .await
+        .expect("Could not connect to mock database");
+    migrate!()
+        .run(&db)
+        .await
+        .expect("Could not migrate mock database");
+
+    db
 }
 
 #[actix_web::test]
 async fn health_check_works() {
-    let url = spawn_app();
-    let status = reqwest::get(format!("{}/health_check", &url))
+    let app = spawn_app().await;
+    let status = reqwest::get(format!("{}/health_check", &app.url))
         .await
         .expect("Could not make request")
         .status();
@@ -34,7 +63,7 @@ async fn health_check_works() {
 
 #[actix_web::test]
 async fn subscribe_returns_200_for_valid_data() {
-    let url = spawn_app();
+    let app = spawn_app().await;
 
     let mut body = HashMap::new();
     body.insert("email", "doce@example.com");
@@ -42,7 +71,7 @@ async fn subscribe_returns_200_for_valid_data() {
 
     let client = reqwest::Client::new();
     let status = client
-        .post(format!("{}/subscribe", &url))
+        .post(format!("{}/subscribe", &app.url))
         .json(&body)
         .send()
         .await
@@ -50,9 +79,8 @@ async fn subscribe_returns_200_for_valid_data() {
         .status();
     assert!(status.is_success());
 
-    let pg = connect_to_database().await;
     let subscription = query!("SELECT email, name FROM subscriptions")
-        .fetch_one(&pg)
+        .fetch_one(&app.db)
         .await
         .expect("Could not fetch subscription");
 
@@ -62,7 +90,7 @@ async fn subscribe_returns_200_for_valid_data() {
 
 #[actix_web::test]
 async fn subscribe_returns_400_for_invalid_data() {
-    let url = spawn_app();
+    let app = spawn_app().await;
     let client = reqwest::Client::new();
 
     let test_cases = vec![
@@ -77,7 +105,7 @@ async fn subscribe_returns_400_for_invalid_data() {
             body.insert(key, value);
         }
         let status = client
-            .post(format!("{}/subscribe", &url))
+            .post(format!("{}/subscribe", &app.url))
             .json(&body)
             .send()
             .await
