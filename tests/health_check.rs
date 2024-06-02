@@ -3,12 +3,12 @@ use std::net::TcpListener;
 
 use actix_web::rt::spawn;
 
-use zero2prod::get_server;
+use zero2prod::startup::create_server;
 
 fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Could not bind to random port");
     let port = listener.local_addr().unwrap().port();
-    let server = get_server(listener).expect("Could not get server");
+    let server = create_server(listener).expect("Could not get server");
     let _ = spawn(server);
     format!("http://127.0.0.1:{port}")
 }
@@ -32,7 +32,8 @@ async fn subscribe_returns_200_for_valid_data() {
     body.insert("name", "Doce");
 
     let client = reqwest::Client::new();
-    let status = client.post(format!("{}/subscribe", &url))
+    let status = client
+        .post(format!("{}/subscribe", &url))
         .json(&body)
         .send()
         .await
@@ -57,12 +58,18 @@ async fn subscribe_returns_400_for_invalid_data() {
         if !key.is_empty() && !value.is_empty() {
             body.insert(key, value);
         }
-        let status = client.post(format!("{}/subscribe", &url))
+        let status = client
+            .post(format!("{}/subscribe", &url))
             .json(&body)
             .send()
             .await
             .expect("Could not make request")
             .status();
-        assert_eq!(status.as_u16(), 400, "API did not return 400 when request has {}", case);
+        assert_eq!(
+            status.as_u16(),
+            400,
+            "API did not return 400 when request has {}",
+            case
+        );
     }
 }
