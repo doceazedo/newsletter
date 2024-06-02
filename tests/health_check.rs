@@ -1,5 +1,5 @@
-use std::net::TcpListener;
 use actix_web::rt::spawn;
+use std::net::TcpListener;
 use zero2prod::get_server;
 
 fn spawn_app() -> String {
@@ -13,6 +13,9 @@ fn spawn_app() -> String {
 #[actix_web::test]
 async fn health_check_works() {
     let url = spawn_app();
-    let status = reqwest::get(format!("{}/health_check", &url)).await.unwrap().status();
+    let status = reqwest::get(format!("{}/health_check", &url))
+        .await
+        .unwrap()
+        .status();
     assert!(status.is_success());
 }
