@@ -1,17 +1,22 @@
 use std::net::TcpListener;
 
+use secrecy::ExposeSecret;
 use sqlx::PgPool;
 
 use zero2prod::config::get_config;
 use zero2prod::startup::run;
+use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    let subscriber = get_subscriber("zero2prod".to_string(), "info".to_string(), false);
+    init_subscriber(subscriber);
+
     let ip = "127.0.0.1";
     let config = get_config();
     let db_uri = config.database.get_uri();
 
-    let db = PgPool::connect(&db_uri)
+    let db = PgPool::connect(&db_uri.expose_secret())
         .await
         .expect("Could not connect to database");
     let listener = TcpListener::bind(format!("{}:{}", &ip, &config.port))

@@ -2,11 +2,19 @@ use std::collections::HashMap;
 use std::net::TcpListener;
 
 use actix_web::rt::spawn;
-use sqlx::{migrate, query, Executor, PgPool};
+use once_cell::sync::Lazy;
+use secrecy::ExposeSecret;
+use sqlx::{Executor, migrate, PgPool, query};
 use uuid::Uuid;
 
 use zero2prod::config::get_config;
 use zero2prod::startup::create_server;
+use zero2prod::telemetry::{get_subscriber, init_subscriber};
+
+static TRACING: Lazy<()> = Lazy::new(|| {
+    let subscriber = get_subscriber("test".to_string(), "debug".to_string(), !std::env::var("TEST_LOG").is_ok());
+    init_subscriber(subscriber);
+});
 
 struct App {
     url: String,
@@ -14,6 +22,7 @@ struct App {
 }
 
 async fn spawn_app() -> App {
+    Lazy::force(&TRACING);
     let db = setup_mock_database().await;
     let listener = TcpListener::bind("127.0.0.1:0").expect("Could not bind to random port");
     let port = listener.local_addr().unwrap().port();
@@ -31,7 +40,7 @@ async fn setup_mock_database() -> PgPool {
     config.database.name = Uuid::new_v4().to_string();
 
     // create database
-    let db = PgPool::connect(&db_uri)
+    let db = PgPool::connect(&db_uri.expose_secret())
         .await
         .expect("Could not connect to database");
     db.execute(format!(r#"CREATE DATABASE "{}";"#, config.database.name).as_str())
@@ -40,7 +49,7 @@ async fn setup_mock_database() -> PgPool {
 
     // migrate database
     let db_uri = config.database.get_uri();
-    let db = PgPool::connect(&db_uri)
+    let db = PgPool::connect(&db_uri.expose_secret())
         .await
         .expect("Could not connect to mock database");
     migrate!()

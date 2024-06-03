@@ -1,4 +1,5 @@
 use config::{Config, File};
+use secrecy::{ExposeSecret, Secret};
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -10,24 +11,24 @@ pub struct Settings {
 pub struct DatabaseSettings {
     pub host: String,
     pub user: String,
-    pub password: String,
+    pub password: Secret<String>,
     pub name: String,
     pub port: u16,
 }
 
 impl DatabaseSettings {
-    pub fn get_uri(&self) -> String {
+    pub fn get_uri(&self) -> Secret<String> {
         format!(
             "postgres://{}:{}@{}:{}/{}",
-            self.user, self.password, self.host, self.port, self.name
-        )
+            self.user, self.password.expose_secret(), self.host, self.port, self.name
+        ).into()
     }
 
-    pub fn get_uri_without_db(&self) -> String {
+    pub fn get_uri_without_db(&self) -> Secret<String> {
         format!(
             "postgres://{}:{}@{}:{}",
-            self.user, self.password, self.host, self.port
-        )
+            self.user, self.password.expose_secret(), self.host, self.port
+        ).into()
     }
 }
 

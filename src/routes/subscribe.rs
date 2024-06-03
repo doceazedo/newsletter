@@ -1,8 +1,8 @@
-use actix_web::{post, web, HttpResponse};
+use actix_web::{HttpResponse, post, web};
 use serde::Deserialize;
+use sqlx::PgPool;
 use sqlx::types::chrono::Utc;
 use sqlx::types::Uuid;
-use sqlx::PgPool;
 
 #[derive(Deserialize)]
 struct SubscribeRequest {
@@ -10,9 +10,28 @@ struct SubscribeRequest {
     email: String,
 }
 
+#[tracing::instrument(
+    name = "Creating new subscription",
+    skip(req, db),
+    fields(
+        email = req.email,
+        name = req.name
+    )
+)]
 #[post("/subscribe")]
 async fn subscribe(req: web::Json<SubscribeRequest>, db: web::Data<PgPool>) -> HttpResponse {
-    match sqlx::query!(
+    match insert_subscription(&req, &db).await {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
+#[tracing::instrument(
+    name = "Inserting data",
+    skip(req, db),
+)]
+async fn insert_subscription(req: &SubscribeRequest, db: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at)
         VALUES ($1, $2, $3, $4)
@@ -22,13 +41,11 @@ async fn subscribe(req: web::Json<SubscribeRequest>, db: web::Data<PgPool>) -> H
         req.name,
         Utc::now()
     )
-    .execute(db.get_ref())
-    .await
-    {
-        Ok(_) => HttpResponse::Ok().finish(),
-        Err(e) => {
-            println!("Failed to insert subscription: {}", e);
-            HttpResponse::InternalServerError().finish()
-        }
-    }
+        .execute(db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to insert data: {:?}", e);
+            e
+        })?;
+    Ok(())
 }
