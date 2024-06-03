@@ -4,7 +4,7 @@ use std::net::TcpListener;
 use actix_web::rt::spawn;
 use once_cell::sync::Lazy;
 use secrecy::ExposeSecret;
-use sqlx::{Executor, migrate, PgPool, query};
+use sqlx::{migrate, query, Executor, PgPool};
 use uuid::Uuid;
 
 use zero2prod::config::get_config;
@@ -12,7 +12,11 @@ use zero2prod::startup::create_server;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
 static TRACING: Lazy<()> = Lazy::new(|| {
-    let subscriber = get_subscriber("test".to_string(), "debug".to_string(), !std::env::var("TEST_LOG").is_ok());
+    let subscriber = get_subscriber(
+        "test".to_string(),
+        "debug".to_string(),
+        !std::env::var("TEST_LOG").is_ok(),
+    );
     init_subscriber(subscriber);
 });
 

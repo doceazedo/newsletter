@@ -20,15 +20,24 @@ impl DatabaseSettings {
     pub fn get_uri(&self) -> Secret<String> {
         format!(
             "postgres://{}:{}@{}:{}/{}",
-            self.user, self.password.expose_secret(), self.host, self.port, self.name
-        ).into()
+            self.user,
+            self.password.expose_secret(),
+            self.host,
+            self.port,
+            self.name
+        )
+        .into()
     }
 
     pub fn get_uri_without_db(&self) -> Secret<String> {
         format!(
             "postgres://{}:{}@{}:{}",
-            self.user, self.password.expose_secret(), self.host, self.port
-        ).into()
+            self.user,
+            self.password.expose_secret(),
+            self.host,
+            self.port
+        )
+        .into()
     }
 }
 

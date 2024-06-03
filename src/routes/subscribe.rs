@@ -1,8 +1,8 @@
-use actix_web::{HttpResponse, post, web};
+use actix_web::{post, web, HttpResponse};
 use serde::Deserialize;
-use sqlx::PgPool;
 use sqlx::types::chrono::Utc;
 use sqlx::types::Uuid;
+use sqlx::PgPool;
 
 #[derive(Deserialize)]
 struct SubscribeRequest {
@@ -26,10 +26,7 @@ async fn subscribe(req: web::Json<SubscribeRequest>, db: web::Data<PgPool>) -> H
     }
 }
 
-#[tracing::instrument(
-    name = "Inserting data",
-    skip(req, db),
-)]
+#[tracing::instrument(name = "Inserting data", skip(req, db))]
 async fn insert_subscription(req: &SubscribeRequest, db: &PgPool) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -41,11 +38,11 @@ async fn insert_subscription(req: &SubscribeRequest, db: &PgPool) -> Result<(), 
         req.name,
         Utc::now()
     )
-        .execute(db)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to insert data: {:?}", e);
-            e
-        })?;
+    .execute(db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to insert data: {:?}", e);
+        e
+    })?;
     Ok(())
 }
