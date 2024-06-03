@@ -3,8 +3,9 @@ use secrecy::{ExposeSecret, Secret};
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
-    pub database: DatabaseSettings,
+    pub ip: String,
     pub port: u16,
+    pub database: DatabaseSettings,
 }
 
 #[derive(serde::Deserialize)]
@@ -26,7 +27,7 @@ impl DatabaseSettings {
             self.port,
             self.name
         )
-        .into()
+            .into()
     }
 
     pub fn get_uri_without_db(&self) -> Secret<String> {
@@ -37,15 +38,19 @@ impl DatabaseSettings {
             self.host,
             self.port
         )
-        .into()
+            .into()
     }
 }
 
 pub fn get_config() -> Settings {
+    let config_file = match std::env::var("ENVIRONMENT") {
+        Ok(env) => format!("config.{}.yaml", env),
+        Err(_) => "config.yaml".to_string(),
+    };
     let settings = Config::builder()
-        .add_source(File::with_name("config.yaml"))
+        .add_source(File::with_name(&config_file))
         .build()
-        .expect("Could not load config.json");
+        .unwrap_or_else(|_| panic!("Could not load {}", config_file));
     settings
         .try_deserialize::<Settings>()
         .expect("Could not deserialize config")

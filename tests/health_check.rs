@@ -4,10 +4,10 @@ use std::net::TcpListener;
 use actix_web::rt::spawn;
 use once_cell::sync::Lazy;
 use secrecy::ExposeSecret;
-use sqlx::{migrate, query, Executor, PgPool};
+use sqlx::{Executor, migrate, PgPool, query};
 use uuid::Uuid;
 
-use zero2prod::config::get_config;
+use zero2prod::config::{DatabaseSettings, get_config};
 use zero2prod::startup::create_server;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
@@ -15,7 +15,7 @@ static TRACING: Lazy<()> = Lazy::new(|| {
     let subscriber = get_subscriber(
         "test".to_string(),
         "debug".to_string(),
-        !std::env::var("TEST_LOG").is_ok(),
+        std::env::var("TEST_LOG").is_err(),
     );
     init_subscriber(subscriber);
 });
@@ -27,33 +27,33 @@ struct App {
 
 async fn spawn_app() -> App {
     Lazy::force(&TRACING);
-    let db = setup_mock_database().await;
-    let listener = TcpListener::bind("127.0.0.1:0").expect("Could not bind to random port");
+    let mut config = get_config();
+    let db = setup_mock_database(&mut config.database).await;
+    let listener = TcpListener::bind(format!("{}:0", &config.ip)).expect("Could not bind to random port");
     let port = listener.local_addr().unwrap().port();
     let server = create_server(listener, db.clone()).expect("Could not get server");
     let _ = spawn(server);
     App {
-        url: format!("http://127.0.0.1:{port}"),
+        url: format!("http://{}:{}", &config.ip, port),
         db,
     }
 }
 
-async fn setup_mock_database() -> PgPool {
-    let mut config = get_config();
-    let db_uri = config.database.get_uri_without_db();
-    config.database.name = Uuid::new_v4().to_string();
+async fn setup_mock_database(db_settings: &mut DatabaseSettings) -> PgPool {
+    let db_uri = db_settings.get_uri_without_db();
+    db_settings.name = Uuid::new_v4().to_string();
 
     // create database
-    let db = PgPool::connect(&db_uri.expose_secret())
+    let db = PgPool::connect(db_uri.expose_secret())
         .await
         .expect("Could not connect to database");
-    db.execute(format!(r#"CREATE DATABASE "{}";"#, config.database.name).as_str())
+    db.execute(format!(r#"CREATE DATABASE "{}";"#, db_settings.name).as_str())
         .await
         .expect("Could not create mock database");
 
     // migrate database
-    let db_uri = config.database.get_uri();
-    let db = PgPool::connect(&db_uri.expose_secret())
+    let db_uri = db_settings.get_uri();
+    let db = PgPool::connect(db_uri.expose_secret())
         .await
         .expect("Could not connect to mock database");
     migrate!()
