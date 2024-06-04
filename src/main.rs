@@ -15,8 +15,7 @@ async fn main() -> std::io::Result<()> {
     let config = get_config();
     let db_uri = config.database.get_uri();
 
-    let db = PgPool::connect_lazy(db_uri.expose_secret())
-        .expect("Could not connect to database");
+    let db = PgPool::connect_lazy(db_uri.expose_secret()).expect("Could not connect to database");
     let listener = TcpListener::bind(format!("{}:{}", &config.ip, &config.port))
         .expect("Could not bind to random port");
     let port = listener.local_addr().unwrap().port();

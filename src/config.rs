@@ -30,7 +30,7 @@ impl DatabaseSettings {
             self.port,
             self.name
         )
-            .into()
+        .into()
     }
 
     pub fn get_uri_without_db(&self) -> Secret<String> {
@@ -41,7 +41,7 @@ impl DatabaseSettings {
             self.host,
             self.port
         )
-            .into()
+        .into()
     }
 }
 

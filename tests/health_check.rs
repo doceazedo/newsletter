@@ -4,10 +4,10 @@ use std::net::TcpListener;
 use actix_web::rt::spawn;
 use once_cell::sync::Lazy;
 use secrecy::ExposeSecret;
-use sqlx::{Executor, migrate, PgPool, query};
+use sqlx::{migrate, query, Executor, PgPool};
 use uuid::Uuid;
 
-use zero2prod::config::{DatabaseSettings, get_config};
+use zero2prod::config::{get_config, DatabaseSettings};
 use zero2prod::startup::create_server;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
@@ -29,7 +29,8 @@ async fn spawn_app() -> App {
     Lazy::force(&TRACING);
     let mut config = get_config();
     let db = setup_mock_database(&mut config.database).await;
-    let listener = TcpListener::bind(format!("{}:0", &config.ip)).expect("Could not bind to random port");
+    let listener =
+        TcpListener::bind(format!("{}:0", &config.ip)).expect("Could not bind to random port");
     let port = listener.local_addr().unwrap().port();
     let server = create_server(listener, db.clone()).expect("Could not get server");
     let _ = spawn(server);
