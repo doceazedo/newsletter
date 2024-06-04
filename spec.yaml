@@ -1,0 +1,17 @@
+name: newsletter
+region: nyc1
+services:
+  - name: newsletter
+    dockerfile_path: Dockerfile
+    source_dir: .
+    github:
+      repo: doceazedo/newsletter
+      branch: main
+      deploy_on_push: true
+    health_check:
+      http_path: /health_check
+    instance_count: 1
+    instance_size_slug: basic-xxs
+databases:
+  - name: newsletter-db
+    engine: PG

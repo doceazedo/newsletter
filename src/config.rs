@@ -1,9 +1,11 @@
-use config::{Config, File};
+use config::{Config, Environment, File};
 use secrecy::{ExposeSecret, Secret};
+use serde_aux::prelude::deserialize_number_from_string;
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub ip: String,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub database: DatabaseSettings,
 }
@@ -14,6 +16,7 @@ pub struct DatabaseSettings {
     pub user: String,
     pub password: Secret<String>,
     pub name: String,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
 }
 
@@ -49,6 +52,7 @@ pub fn get_config() -> Settings {
     };
     let settings = Config::builder()
         .add_source(File::with_name(&config_file))
+        .add_source(Environment::default().separator("_"))
         .build()
         .unwrap_or_else(|_| panic!("Could not load {}", config_file));
     settings
