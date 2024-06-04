@@ -46,15 +46,11 @@ impl DatabaseSettings {
 }
 
 pub fn get_config() -> Settings {
-    let config_file = match std::env::var("ENVIRONMENT") {
-        Ok(env) => format!("config.{}.yaml", env),
-        Err(_) => "config.yaml".to_string(),
-    };
     let settings = Config::builder()
-        .add_source(File::with_name(&config_file))
+        .add_source(File::with_name("config.yaml"))
         .add_source(Environment::default().separator("_"))
         .build()
-        .unwrap_or_else(|_| panic!("Could not load {}", config_file));
+        .expect("Could not load config.yml");
     settings
         .try_deserialize::<Settings>()
         .expect("Could not deserialize config")
