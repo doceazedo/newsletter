@@ -15,13 +15,13 @@ services:
     envs:
       - key: DATABASE_HOST
         scope: RUN_TIME
-        value: ${newsletter.HOST}
+        value: ${newsletter.HOSTNAME}
       - key: DATABASE_PORT
         scope: RUN_TIME
         value: ${newsletter.PORT}
       - key: DATABASE_USER
         scope: RUN_TIME
-        value: ${newsletter.USER}
+        value: ${newsletter.USERNAME}
       - key: DATABASE_PASSWORD
         scope: RUN_TIME
         value: ${newsletter.PASSWORD}
