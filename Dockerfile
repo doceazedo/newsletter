@@ -25,4 +25,4 @@ RUN apt-get update -y \
 COPY --from=builder /app/target/release/zero2prod zero2prod
 COPY config.prod.yaml config.prod.yaml
 ENV APP_ENVIRONMENT prod
-ENTRYPOINT ["zero2prod"]
+ENTRYPOINT ["./zero2prod"]
