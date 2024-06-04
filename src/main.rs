@@ -1,6 +1,5 @@
 use std::net::TcpListener;
 
-use secrecy::ExposeSecret;
 use sqlx::PgPool;
 
 use zero2prod::config::get_config;
@@ -13,9 +12,9 @@ async fn main() -> std::io::Result<()> {
     init_subscriber(subscriber);
 
     let config = get_config();
-    let db_uri = config.database.get_uri();
+    let db_options = config.database.get_options();
 
-    let db = PgPool::connect_lazy(db_uri.expose_secret()).expect("Could not connect to database");
+    let db = PgPool::connect_lazy_with(db_options);
     let listener = TcpListener::bind(format!("{}:{}", &config.ip, &config.port))
         .expect("Could not bind to random port");
     let port = listener.local_addr().unwrap().port();

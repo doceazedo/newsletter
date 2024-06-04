@@ -12,6 +12,22 @@ services:
       http_path: /health_check
     instance_count: 1
     instance_size_slug: basic-xxs
+    envs:
+      - key: DATABASE_HOST
+        scope: RUN_TIME
+        value: ${newsletter.HOST}
+      - key: DATABASE_PORT
+        scope: RUN_TIME
+        value: ${newsletter.PORT}
+      - key: DATABASE_USER
+        scope: RUN_TIME
+        value: ${newsletter.USER}
+      - key: DATABASE_PASSWORD
+        scope: RUN_TIME
+        value: ${newsletter.PASSWORD}
+      - key: DATABASE_NAME
+        scope: RUN_TIME
+        value: ${newsletter.DATABASE}
 databases:
   - name: newsletter-db
     engine: PG

@@ -1,6 +1,7 @@
 use config::{Config, Environment, File};
 use secrecy::{ExposeSecret, Secret};
-use serde_aux::prelude::deserialize_number_from_string;
+use serde_aux::prelude::{deserialize_bool_from_anything, deserialize_number_from_string};
+use sqlx::postgres::{PgConnectOptions, PgSslMode};
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -18,30 +19,26 @@ pub struct DatabaseSettings {
     pub name: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
+    #[serde(deserialize_with = "deserialize_bool_from_anything")]
+    pub require_ssl: bool,
 }
 
 impl DatabaseSettings {
-    pub fn get_uri(&self) -> Secret<String> {
-        format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.user,
-            self.password.expose_secret(),
-            self.host,
-            self.port,
-            self.name
-        )
-        .into()
+    pub fn get_options(&self) -> PgConnectOptions {
+        self.get_options_without_default_db().database(&self.name)
     }
 
-    pub fn get_uri_without_db(&self) -> Secret<String> {
-        format!(
-            "postgres://{}:{}@{}:{}",
-            self.user,
-            self.password.expose_secret(),
-            self.host,
-            self.port
-        )
-        .into()
+    pub fn get_options_without_default_db(&self) -> PgConnectOptions {
+        PgConnectOptions::new()
+            .host(&self.host)
+            .username(&self.user)
+            .password(self.password.expose_secret())
+            .port(self.port)
+            .ssl_mode(if self.require_ssl {
+                PgSslMode::Require
+            } else {
+                PgSslMode::Prefer
+            })
     }
 }
 

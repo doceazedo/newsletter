@@ -3,11 +3,10 @@ use std::net::TcpListener;
 
 use actix_web::rt::spawn;
 use once_cell::sync::Lazy;
-use secrecy::ExposeSecret;
-use sqlx::{migrate, query, Executor, PgPool};
+use sqlx::{Executor, migrate, PgPool, query};
 use uuid::Uuid;
 
-use zero2prod::config::{get_config, DatabaseSettings};
+use zero2prod::config::{DatabaseSettings, get_config};
 use zero2prod::startup::create_server;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
@@ -40,23 +39,19 @@ async fn spawn_app() -> App {
     }
 }
 
-async fn setup_mock_database(db_settings: &mut DatabaseSettings) -> PgPool {
-    let db_uri = db_settings.get_uri_without_db();
-    db_settings.name = Uuid::new_v4().to_string();
+async fn setup_mock_database(config_database: &mut DatabaseSettings) -> PgPool {
+    let db_options = config_database.get_options_without_default_db();
+    config_database.name = Uuid::new_v4().to_string();
 
     // create database
-    let db = PgPool::connect(db_uri.expose_secret())
-        .await
-        .expect("Could not connect to database");
-    db.execute(format!(r#"CREATE DATABASE "{}";"#, db_settings.name).as_str())
+    let db = PgPool::connect_lazy_with(db_options);
+    db.execute(format!(r#"CREATE DATABASE "{}";"#, config_database.name).as_str())
         .await
         .expect("Could not create mock database");
 
     // migrate database
-    let db_uri = db_settings.get_uri();
-    let db = PgPool::connect(db_uri.expose_secret())
-        .await
-        .expect("Could not connect to mock database");
+    let db_options = config_database.get_options();
+    let db = PgPool::connect_lazy_with(db_options);
     migrate!()
         .run(&db)
         .await
