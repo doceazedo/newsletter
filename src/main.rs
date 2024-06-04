@@ -16,7 +16,7 @@ async fn main() -> std::io::Result<()> {
 
     let db = PgPool::connect_lazy_with(db_options);
     let listener = TcpListener::bind(format!("{}:{}", &config.ip, &config.port))
-        .expect("Could not bind to random port");
+        .expect("Could not bind to port");
     let port = listener.local_addr().unwrap().port();
 
     println!("Server is running on http://{}:{}", &config.ip, port);

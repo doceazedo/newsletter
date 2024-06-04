@@ -28,6 +28,9 @@ services:
       - key: DATABASE_NAME
         scope: RUN_TIME
         value: ${newsletter.DATABASE}
+      - key: DATABASE_SSL
+        scope: RUN_TIME
+        value: "true"
 databases:
   - name: newsletter-db
     engine: PG

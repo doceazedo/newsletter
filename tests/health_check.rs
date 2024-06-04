@@ -3,10 +3,10 @@ use std::net::TcpListener;
 
 use actix_web::rt::spawn;
 use once_cell::sync::Lazy;
-use sqlx::{Executor, migrate, PgPool, query};
+use sqlx::{migrate, query, Executor, PgPool};
 use uuid::Uuid;
 
-use zero2prod::config::{DatabaseSettings, get_config};
+use zero2prod::config::{get_config, DatabaseSettings};
 use zero2prod::startup::create_server;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 

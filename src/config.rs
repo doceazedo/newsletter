@@ -20,7 +20,7 @@ pub struct DatabaseSettings {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     #[serde(deserialize_with = "deserialize_bool_from_anything")]
-    pub require_ssl: bool,
+    pub ssl: bool,
 }
 
 impl DatabaseSettings {
@@ -34,7 +34,7 @@ impl DatabaseSettings {
             .username(&self.user)
             .password(self.password.expose_secret())
             .port(self.port)
-            .ssl_mode(if self.require_ssl {
+            .ssl_mode(if self.ssl {
                 PgSslMode::Require
             } else {
                 PgSslMode::Prefer
