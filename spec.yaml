@@ -15,19 +15,19 @@ services:
     envs:
       - key: DATABASE_HOST
         scope: RUN_TIME
-        value: ${newsletter.HOSTNAME}
+        value: ${newsletter-db.HOSTNAME}
       - key: DATABASE_PORT
         scope: RUN_TIME
-        value: ${newsletter.PORT}
+        value: ${newsletter-db.PORT}
       - key: DATABASE_USER
         scope: RUN_TIME
-        value: ${newsletter.USERNAME}
+        value: ${newsletter-db.USERNAME}
       - key: DATABASE_PASSWORD
         scope: RUN_TIME
-        value: ${newsletter.PASSWORD}
+        value: ${newsletter-db.PASSWORD}
       - key: DATABASE_NAME
         scope: RUN_TIME
-        value: ${newsletter.DATABASE}
+        value: ${newsletter-db.DATABASE}
       - key: DATABASE_SSL
         scope: RUN_TIME
         value: "true"
